@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+demo/frames/
+demo/*.json
+.DS_Store
+
+# working notes, not published
+/internal/

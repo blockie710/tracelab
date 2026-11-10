@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tracelab — kinematic trace analysis report</title>
+<style>
+  :root {
+    --bg:#0b0d10; --panel:#12161b; --line:#232a33; --fg:#e6edf3; --dim:#8b98a5; --accent:#22d3ee;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:1000px; margin:0 auto; padding:40px 22px 80px; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:-0.02em; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:0.09em; color:var(--dim);
+    margin:38px 0 12px; font-weight:600; }
+  .sub { color:var(--dim); margin:0 0 26px; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+  .kpis { grid-template-columns:repeat(4,1fr); }
+  @media (max-width:820px) { .kpis { grid-template-columns:repeat(2,1fr); } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .kpi { font-size:30px; font-weight:650; letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
+  .small { color:var(--dim); font-size:12px; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); font-size:13px; }
+  th { color:var(--dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.07em; }
+  .bar { display:inline-block; width:70px; height:6px; background:#1c232b; border-radius:3px;
+    margin-right:6px; vertical-align:middle; overflow:hidden; }
+  .fill { display:block; height:100%; }
+  svg { width:100%; height:auto; }
+  .grid line { stroke:#1f262e; stroke-width:1; }
+  .diag { stroke:#39424d; stroke-dasharray:4 4; }
+  .roc { fill:none; stroke:var(--accent); stroke-width:2.2; }
+  .tick { fill:#7b8794; font-size:11px; font-family:ui-monospace,monospace; }
+  .axis { fill:#7b8794; font-size:11px; }
+  .evidence .score { font-size:34px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .evidence.bad { border-color:#5c1f1f; }
+  .evidence.ok { border-color:#1f4a5c; }
+  .contribs { list-style:none; padding:0; margin:6px 0 0; }
+  .contribs li { display:flex; justify-content:space-between; padding:3px 0;
+    border-bottom:1px dashed #1c232b; }
+  .contrib { font-variant-numeric:tabular-nums; color:var(--dim); }
+  .note { color:var(--dim); font-size:12.5px; border-left:2px solid var(--line);
+    padding-left:12px; margin:14px 0; }
+  code { background:#171d24; padding:2px 6px; border-radius:5px; font-size:12.5px; }
+</style></head><body><div class="wrap">
+
+<h1>tracelab</h1>
+<p class="sub">Kinematic analysis of high-rate input telemetry. Synthetic benchmark,
+seeded and reproducible — no client agent, no kernel driver, no model weights.</p>
+
+<div class="grid kpis">
+  <div class="card"><div class="small">AUC (bot vs human)</div>
+    <div class="kpi">0.991</div>
+    <div class="small">95% CI 0.982–0.997</div></div>
+  <div class="card"><div class="small">Recall at 1% FPR</div>
+    <div class="kpi">75.5%</div>
+    <div class="small">threshold 0.680</div></div>
+  <div class="card"><div class="small">Realised FPR</div>
+    <div class="kpi">0.91%</div>
+    <div class="small">1 false positives / 110 humans</div></div>
+  <div class="card"><div class="small">Hard case: smoothed actor</div>
+    <div class="kpi">50.9%</div>
+    <div class="small">AUC 0.981</div></div>
+</div>
+
+<h2>ROC</h2>
+<div class="card">
+<svg viewBox="0 0 460 300" role="img" aria-label="ROC curve, AUC 0.991">
+  <line x1="44.0" y1="256.0" x2="44.0" y2="44.0" class="grid"/><text x="44.0" y="274" class="tick" text-anchor="middle">0</text><line x1="44.0" y1="256.0" x2="416.0" y2="256.0" class="grid"/><text x="34" y="260.0" class="tick" text-anchor="end">0</text><line x1="137.0" y1="256.0" x2="137.0" y2="44.0" class="grid"/><text x="137.0" y="274" class="tick" text-anchor="middle">0.25</text><line x1="44.0" y1="203.0" x2="416.0" y2="203.0" class="grid"/><text x="34" y="207.0" class="tick" text-anchor="end">0.25</text><line x1="230.0" y1="256.0" x2="230.0" y2="44.0" class="grid"/><text x="230.0" y="274" class="tick" text-anchor="middle">0.5</text><line x1="44.0" y1="150.0" x2="416.0" y2="150.0" class="grid"/><text x="34" y="154.0" class="tick" text-anchor="end">0.5</text><line x1="323.0" y1="256.0" x2="323.0" y2="44.0" class="grid"/><text x="323.0" y="274" class="tick" text-anchor="middle">0.75</text><line x1="44.0" y1="97.0" x2="416.0" y2="97.0" class="grid"/><text x="34" y="101.0" class="tick" text-anchor="end">0.75</text><line x1="416.0" y1="256.0" x2="416.0" y2="44.0" class="grid"/><text x="416.0" y="274" class="tick" text-anchor="middle">1</text><line x1="44.0" y1="44.0" x2="416.0" y2="44.0" class="grid"/><text x="34" y="48.0" class="tick" text-anchor="end">1</text>
+  <line x1="44" y1="256" x2="416" y2="44" class="diag"/>
+  <path d="M416.0,44.0 L402.5,44.0 L402.5,44.0 L382.2,44.0 L365.3,44.0 L351.7,44.0 L351.7,44.0 L341.6,44.0 L334.8,44.0 L331.5,44.0 L321.3,44.0 L314.5,44.0 L307.8,44.0 L290.9,44.0 L284.1,44.0 L280.7,44.0 L274.0,44.0 L260.4,44.0 L253.7,44.0 L243.5,44.0 L236.8,44.0 L233.4,44.0 L233.4,44.0 L230.0,44.0 L223.2,44.0 L223.2,44.0 L216.5,44.0 L213.1,44.0 L209.7,44.0 L206.3,44.0 L206.3,44.0 L199.6,44.0 L196.2,44.0 L186.0,44.0 L179.3,44.0 L172.5,44.0 L159.0,44.0 L159.0,44.0 L152.2,44.0 L148.8,44.0 L148.8,44.0 L148.8,44.0 L138.7,44.0 L131.9,44.0 L131.9,44.0 L128.5,44.0 L121.8,44.0 L118.4,44.0 L115.0,44.0 L111.6,44.0 L108.3,44.0 L104.9,44.0 L104.9,44.0 L104.9,44.0 L104.9,44.0 L104.9,44.0 L104.9,44.0 L101.5,44.0 L101.5,44.0 L98.1,45.0 L98.1,45.0 L94.7,45.0 L91.3,45.0 L88.0,45.0 L88.0,45.9 L88.0,45.9 L88.0,45.9 L88.0,46.9 L88.0,46.9 L88.0,46.9 L88.0,47.9 L88.0,47.9 L81.2,48.8 L81.2,48.8 L81.2,48.8 L81.2,48.8 L74.4,48.8 L74.4,49.8 L71.1,49.8 L71.1,49.8 L67.7,49.8 L67.7,50.7 L67.7,50.7 L67.7,50.7 L67.7,50.7 L67.7,50.7 L64.3,50.7 L64.3,51.7 L60.9,52.7 L60.9,52.7 L60.9,52.7 L60.9,52.7 L60.9,52.7 L60.9,53.6 L60.9,53.6 L60.9,53.6 L60.9,54.6 L60.9,54.6 L60.9,54.6 L60.9,55.6 L60.9,56.5 L60.9,56.5 L60.9,56.5 L57.5,58.5 L57.5,58.5 L57.5,59.4 L57.5,59.4 L57.5,60.4 L57.5,61.3 L54.1,64.2 L54.1,64.2 L54.1,64.2 L54.1,64.2 L54.1,64.2 L54.1,65.2 L50.8,65.2 L50.8,68.1 L50.8,70.0 L50.8,70.0 L50.8,71.9 L50.8,71.9 L50.8,73.9 L50.8,75.8 L50.8,76.8 L50.8,78.7 L50.8,78.7 L50.8,79.7 L50.8,81.6 L50.8,81.6 L50.8,82.5 L50.8,84.5 L50.8,87.4 L50.8,88.3 L50.8,89.3 L50.8,92.2 L47.4,95.1 L47.4,97.0 L47.4,98.0 L47.4,100.9 L47.4,102.8 L47.4,104.7 L47.4,108.6 L47.4,108.6 L47.4,109.5 L47.4,112.4 L44.0,113.4 L44.0,117.2 L44.0,117.2 L44.0,119.2 L44.0,120.1 L44.0,122.1 L44.0,123.0 L44.0,124.9 L44.0,129.8 L44.0,130.7 L44.0,130.7 L44.0,133.6 L44.0,134.6 L44.0,134.6 L44.0,135.5 L44.0,135.5 L44.0,140.4 L44.0,140.4 L44.0,141.3 L44.0,142.3 L44.0,144.2 L44.0,146.1 L44.0,147.1 L44.0,147.1 L44.0,148.1 L44.0,148.1 L44.0,148.1 L44.0,150.0 L44.0,151.0 L44.0,151.0 L44.0,151.0 L44.0,151.0 L44.0,151.9 L44.0,153.9 L44.0,153.9 L44.0,155.8 L44.0,156.7 L44.0,158.7 L44.0,160.6 L44.0,161.6 L44.0,161.6 L44.0,164.5 L44.0,165.4 L44.0,166.4 L44.0,166.4 L44.0,168.3 L44.0,169.3 L44.0,174.1 L44.0,182.8 L44.0,185.7 L44.0,189.5 L44.0,194.3 L44.0,200.1 L44.0,215.5 L44.0,255.0" class="roc"/>
+  <text x="230.0" y="294" class="axis" text-anchor="middle">false positive rate</text>
+  <text x="14" y="150.0" class="axis" transform="rotate(-90 14 150.0)" text-anchor="middle">true positive rate</text>
+</svg></div>
+
+<h2>Score distribution</h2>
+<div class="card">
+<svg viewBox="0 0 460 340" role="img" aria-label="detector score distribution by class">
+  <line x1="56" y1="226.0" x2="442.0" y2="226.0" class="grid"/><text x="47" y="230.0" class="tick" text-anchor="end">0</text><line x1="56" y1="121.0" x2="442.0" y2="121.0" class="grid"/><text x="47" y="125.0" class="tick" text-anchor="end">47</text><line x1="56" y1="16.0" x2="442.0" y2="16.0" class="grid"/><text x="47" y="20.0" class="tick" text-anchor="end">94</text>
+  <rect x="57.0" y="154.5" width="4.7" height="71.5" fill="#6b7280" opacity="0.92"><title>human: 32</title></rect><rect x="81.1" y="170.1" width="4.7" height="55.9" fill="#6b7280" opacity="0.92"><title>human: 25</title></rect><rect x="105.2" y="183.6" width="4.7" height="42.4" fill="#6b7280" opacity="0.92"><title>human: 19</title></rect><rect x="129.4" y="194.7" width="4.7" height="31.3" fill="#6b7280" opacity="0.92"><title>human: 14</title></rect><rect x="153.5" y="214.8" width="4.7" height="11.2" fill="#6b7280" opacity="0.92"><title>human: 5</title></rect><rect x="177.6" y="217.1" width="4.7" height="8.9" fill="#6b7280" opacity="0.92"><title>human: 4</title></rect><rect x="201.8" y="214.8" width="4.7" height="11.2" fill="#6b7280" opacity="0.92"><title>human: 5</title></rect><rect x="225.9" y="223.8" width="4.7" height="2.2" fill="#6b7280" opacity="0.92"><title>human: 1</title></rect><rect x="250.0" y="221.5" width="4.7" height="4.5" fill="#6b7280" opacity="0.92"><title>human: 2</title></rect><rect x="274.1" y="223.8" width="4.7" height="2.2" fill="#6b7280" opacity="0.92"><title>human: 1</title></rect><rect x="298.2" y="223.8" width="4.7" height="2.2" fill="#6b7280" opacity="0.92"><title>human: 1</title></rect><rect x="322.4" y="223.8" width="4.7" height="2.2" fill="#6b7280" opacity="0.92"><title>human: 1</title></rect><rect x="346.5" y="226.0" width="4.7" height="0.0" fill="#6b7280" opacity="0.92"><title>human: 0</title></rect><rect x="370.6" y="226.0" width="4.7" height="0.0" fill="#6b7280" opacity="0.92"><title>human: 0</title></rect><rect x="394.8" y="226.0" width="4.7" height="0.0" fill="#6b7280" opacity="0.92"><title>human: 0</title></rect><rect x="418.9" y="226.0" width="4.7" height="0.0" fill="#6b7280" opacity="0.92"><title>human: 0</title></rect><rect x="63.3" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="87.5" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="111.6" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="135.7" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="159.8" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="184.0" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="208.1" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="232.2" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="256.3" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="280.5" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="304.6" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="328.7" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="352.8" y="226.0" width="4.7" height="0.0" fill="#ef4444" opacity="0.92"><title>snap: 0</title></rect><rect x="377.0" y="223.8" width="4.7" height="2.2" fill="#ef4444" opacity="0.92"><title>snap: 1</title></rect><rect x="401.1" y="192.5" width="4.7" height="33.5" fill="#ef4444" opacity="0.92"><title>snap: 15</title></rect><rect x="425.2" y="16.0" width="4.7" height="210.0" fill="#ef4444" opacity="0.92"><title>snap: 94</title></rect><rect x="69.7" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect><rect x="93.8" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect><rect x="117.9" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect><rect x="142.1" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect><rect x="166.2" y="223.8" width="4.7" height="2.2" fill="#f59e0b" opacity="0.92"><title>smoothed: 1</title></rect><rect x="190.3" y="217.1" width="4.7" height="8.9" fill="#f59e0b" opacity="0.92"><title>smoothed: 4</title></rect><rect x="214.4" y="219.3" width="4.7" height="6.7" fill="#f59e0b" opacity="0.92"><title>smoothed: 3</title></rect><rect x="238.6" y="217.1" width="4.7" height="8.9" fill="#f59e0b" opacity="0.92"><title>smoothed: 4</title></rect><rect x="262.7" y="205.9" width="4.7" height="20.1" fill="#f59e0b" opacity="0.92"><title>smoothed: 9</title></rect><rect x="286.8" y="192.5" width="4.7" height="33.5" fill="#f59e0b" opacity="0.92"><title>smoothed: 15</title></rect><rect x="310.9" y="181.3" width="4.7" height="44.7" fill="#f59e0b" opacity="0.92"><title>smoothed: 20</title></rect><rect x="335.1" y="174.6" width="4.7" height="51.4" fill="#f59e0b" opacity="0.92"><title>smoothed: 23</title></rect><rect x="359.2" y="179.1" width="4.7" height="46.9" fill="#f59e0b" opacity="0.92"><title>smoothed: 21</title></rect><rect x="383.3" y="203.7" width="4.7" height="22.3" fill="#f59e0b" opacity="0.92"><title>smoothed: 10</title></rect><rect x="407.4" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect><rect x="431.6" y="226.0" width="4.7" height="0.0" fill="#f59e0b" opacity="0.92"><title>smoothed: 0</title></rect>
+  <text x="56.0" y="248.0" class="tick" text-anchor="middle">0</text><text x="152.5" y="248.0" class="tick" text-anchor="middle">0.25</text><text x="249.0" y="248.0" class="tick" text-anchor="middle">0.5</text><text x="345.5" y="248.0" class="tick" text-anchor="middle">0.75</text><text x="442.0" y="248.0" class="tick" text-anchor="middle">1</text>
+  <text x="249" y="270" class="axis" text-anchor="middle">detector score</text>
+  <text x="16" y="121" class="axis" transform="rotate(-90 16 121)" text-anchor="middle">traces per bin</text>
+  <rect x="56" y="314" width="9" height="9" fill="#6b7280"/><text x="71" y="322" class="tick">human</text><rect x="196" y="314" width="9" height="9" fill="#ef4444"/><text x="211" y="322" class="tick">snap</text><rect x="336" y="314" width="9" height="9" fill="#f59e0b"/><text x="351" y="322" class="tick">smoothed</text>
+</svg></div>
+<p class="note">Note the overlap in the middle: raw snaps separate almost perfectly, smoothed
+actors do not. That gap is the honest perimeter of this method.</p>
+
+<h2>Features</h2>
+<div class="card"><table>
+  <thead><tr><th>feature</th><th>human</th><th>snap</th><th>smoothed</th><th>weight</th></tr></thead>
+  <tbody><tr><td class='mono'>acquire_time_s</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 0.98</td><td><span class="bar"><span class="fill" style="width:20.1%;background:#ef4444"></span></span> 0.20</td><td><span class="bar"><span class="fill" style="width:64.6%;background:#f59e0b"></span></span> 0.63</td><td class='mono' style='color:#22d3ee'>−0.19</td></tr><tr><td class='mono'>peak_speed_dps</td><td><span class="bar"><span class="fill" style="width:37.0%;background:#6b7280"></span></span> 113.33</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#ef4444"></span></span> 306.12</td><td><span class="bar"><span class="fill" style="width:41.5%;background:#f59e0b"></span></span> 127.00</td><td class='mono' style='color:#ef4444'>+0.21</td></tr><tr><td class='mono'>peak_accel_dps2</td><td><span class="bar"><span class="fill" style="width:14.3%;background:#6b7280"></span></span> 2152.23</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#ef4444"></span></span> 15089.78</td><td><span class="bar"><span class="fill" style="width:22.8%;background:#f59e0b"></span></span> 3439.19</td><td class='mono' style='color:#ef4444'>+0.17</td></tr><tr><td class='mono'>err_median_vis</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 11.44</td><td><span class="bar"><span class="fill" style="width:11.6%;background:#ef4444"></span></span> 1.33</td><td><span class="bar"><span class="fill" style="width:34.6%;background:#f59e0b"></span></span> 3.96</td><td class='mono' style='color:#22d3ee'>−1.12</td></tr><tr><td class='mono'>err_std_vis</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 8.20</td><td><span class="bar"><span class="fill" style="width:35.0%;background:#ef4444"></span></span> 2.86</td><td><span class="bar"><span class="fill" style="width:73.2%;background:#f59e0b"></span></span> 6.00</td><td class='mono' style='color:#22d3ee'>−0.53</td></tr><tr><td class='mono'>reversal_rate</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 9.07</td><td><span class="bar"><span class="fill" style="width:3.9%;background:#ef4444"></span></span> 0.35</td><td><span class="bar"><span class="fill" style="width:92.1%;background:#f59e0b"></span></span> 8.36</td><td class='mono' style='color:#22d3ee'>−0.64</td></tr><tr><td class='mono'>occl_drift</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 4.89</td><td><span class="bar"><span class="fill" style="width:1.4%;background:#ef4444"></span></span> -0.07</td><td><span class="bar"><span class="fill" style="width:37.0%;background:#f59e0b"></span></span> 1.81</td><td class='mono' style='color:#22d3ee'>−0.10</td></tr><tr><td class='mono'>cover_track_frac</td><td><span class="bar"><span class="fill" style="width:22.0%;background:#6b7280"></span></span> 0.15</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#ef4444"></span></span> 0.67</td><td><span class="bar"><span class="fill" style="width:49.2%;background:#f59e0b"></span></span> 0.33</td><td class='mono' style='color:#ef4444'>+0.56</td></tr><tr><td class='mono'>tremor_ratio</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 0.33</td><td><span class="bar"><span class="fill" style="width:9.3%;background:#ef4444"></span></span> 0.03</td><td><span class="bar"><span class="fill" style="width:41.3%;background:#f59e0b"></span></span> 0.14</td><td class='mono' style='color:#22d3ee'>−0.36</td></tr><tr><td class='mono'>speed_kurtosis</td><td><span class="bar"><span class="fill" style="width:22.2%;background:#6b7280"></span></span> 3.58</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#ef4444"></span></span> 16.15</td><td><span class="bar"><span class="fill" style="width:25.1%;background:#f59e0b"></span></span> 4.05</td><td class='mono' style='color:#ef4444'>+0.06</td></tr><tr><td class='mono'>stationary_frac</td><td><span class="bar"><span class="fill" style="width:10.7%;background:#6b7280"></span></span> 0.02</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#ef4444"></span></span> 0.23</td><td><span class="bar"><span class="fill" style="width:12.3%;background:#f59e0b"></span></span> 0.03</td><td class='mono' style='color:#ef4444'>+0.00</td></tr><tr><td class='mono'>overshoot_ratio</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 1.50</td><td><span class="bar"><span class="fill" style="width:25.6%;background:#ef4444"></span></span> 0.38</td><td><span class="bar"><span class="fill" style="width:49.3%;background:#f59e0b"></span></span> 0.74</td><td class='mono' style='color:#22d3ee'>−0.15</td></tr><tr><td class='mono'>err_autocorr1</td><td><span class="bar"><span class="fill" style="width:100.0%;background:#6b7280"></span></span> 0.97</td><td><span class="bar"><span class="fill" style="width:84.3%;background:#ef4444"></span></span> 0.82</td><td><span class="bar"><span class="fill" style="width:96.2%;background:#f59e0b"></span></span> 0.93</td><td class='mono' style='color:#22d3ee'>−0.37</td></tr></tbody>
+</table></div>
+
+<h2>Precision at realistic positive prevalence</h2>
+<div class="card"><table>
+  <thead><tr><th>positive prevalence</th><th>precision of a ban</th><th>flagged per 10k players</th></tr></thead>
+  <tbody><tr><td>0.5%</td><td>29.4%</td><td>128</td></tr><tr><td>1.0%</td><td>45.6%</td><td>165</td></tr><tr><td>2.0%</td><td>62.9%</td><td>240</td></tr><tr><td>5.0%</td><td>81.4%</td><td>464</td></tr><tr><td>10.0%</td><td>90.2%</td><td>836</td></tr></tbody>
+</table></div>
+<p class="note">This is the table that matters. At a 1% false-positive rate and a 2% positive
+rate, roughly two in five flagged cases would be wrong. Any headline number that
+quotes only accuracy has skipped this arithmetic.</p>
+
+<h2>Evidence card</h2>
+<div class="grid">
+
+<div class="card evidence bad">
+  <div class="small">lowest-scoring positive in test set</div>
+  <div class="score">0.298</div>
+  <div class="small">reference label: <span class="mono">smoothed</span></div>
+  <div class="small" style="margin-top:10px">largest logit contributions</div>
+  <ul class="contribs"><li><span class='mono'>err_median_vis</span><span class='contrib'>-0.88</span></li><li><span class='mono'>cover_track_frac</span><span class='contrib'>-0.60</span></li><li><span class='mono'>err_autocorr1</span><span class='contrib'>-0.27</span></li><li><span class='mono'>err_std_vis</span><span class='contrib'>+0.22</span></li><li><span class='mono'>tremor_ratio</span><span class='contrib'>-0.21</span></li><li><span class='mono'>reversal_rate</span><span class='contrib'>+0.11</span></li></ul>
+</div>
+
+<div class="card evidence ok">
+  <div class="small">highest-scoring negative in test set</div>
+  <div class="score">0.727</div>
+  <div class="small">reference label: <span class="mono">human</span></div>
+  <div class="small" style="margin-top:10px">largest logit contributions</div>
+  <ul class="contribs"><li><span class='mono'>reversal_rate</span><span class='contrib'>-1.30</span></li><li><span class='mono'>err_median_vis</span><span class='contrib'>+0.85</span></li><li><span class='mono'>err_std_vis</span><span class='contrib'>+0.39</span></li><li><span class='mono'>tremor_ratio</span><span class='contrib'>+0.23</span></li><li><span class='mono'>err_autocorr1</span><span class='contrib'>-0.23</span></li><li><span class='mono'>peak_speed_dps</span><span class='contrib'>-0.16</span></li></ul>
+</div>
+</div>
+<p class="note">A verdict ships with its reasons. That is the difference between a decision
+that survives review and one that becomes a dispute.</p>
+
+<h2>Reproduce</h2>
+<div class="card">
+<div class="small">seed 20261110 · 220 train / 110 test traces per class · 60 Hz · L2 0.05</div>
+<pre class="mono" style="margin:12px 0 0; overflow:auto">pip install -e .
+tracelab demo --out demo/index.html --json demo/results.json</pre>
+</div>
+
+</div></body></html>
