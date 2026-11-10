@@ -134,5 +134,139 @@ class TestReport(unittest.TestCase):
         self.assertGreater(len(html), 5000)
 
 
+class TestIngest(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+
+        self.dir = tempfile.mkdtemp()
+        self.rng = __import__("random").Random(5)
+
+    def _write(self, name, text):
+        path = os.path.join(self.dir, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        return path
+
+    def test_jsonl_round_trip(self):
+        from tracelab.ingest import load_jsonl, to_jsonl
+
+        traces = [simulate_trace(k, self.rng, ticks=90) for k in KINDS]
+        for i, t in enumerate(traces):
+            setattr(t, "trace_id", f"t{i}")
+        path = os.path.join(self.dir, "d.jsonl")
+        to_jsonl(traces, path)
+        back = load_jsonl(path)
+        self.assertEqual(len(back), 3)
+        self.assertEqual([t.kind for t in back], [t.kind for t in traces])
+        self.assertEqual(back[0].n, 90)
+
+    def test_csv_ingest(self):
+        from tracelab.ingest import load_csv
+
+        rows = ["trace_id,tick,yaw,pitch,target_yaw,target_pitch,visible,label"]
+        for i in range(40):
+            rows.append(f"a,{i},{i*0.1:.2f},0.0,10.0,1.0,true,human")
+        path = self._write("d.csv", "\n".join(rows) + "\n")
+        traces = load_csv(path)
+        self.assertEqual(len(traces), 1)
+        self.assertEqual(traces[0].n, 40)
+        self.assertEqual(traces[0].kind, "human")
+
+    def test_rejects_length_mismatch(self):
+        from tracelab.ingest import IngestError, from_records
+
+        with self.assertRaises(IngestError):
+            from_records([{"id": "x", "label": "human", "yaw": [0.0] * 40,
+                           "pitch": [0.0] * 39, "target_yaw": [0.0] * 40,
+                           "target_pitch": [0.0] * 40}])
+
+    def test_rejects_non_finite(self):
+        from tracelab.ingest import IngestError, from_records
+
+        with self.assertRaises(IngestError):
+            from_records([{"id": "x", "label": "human", "yaw": [0.0] * 39 + [float("nan")],
+                           "pitch": [0.0] * 40, "target_yaw": [0.0] * 40,
+                           "target_pitch": [0.0] * 40}])
+
+    def test_rejects_unknown_label(self):
+        from tracelab.ingest import IngestError, from_records
+
+        with self.assertRaises(IngestError):
+            from_records([{"id": "x", "label": "definitely_not_a_label",
+                           "yaw": [0.0] * 40, "pitch": [0.0] * 40,
+                           "target_yaw": [0.0] * 40, "target_pitch": [0.0] * 40}])
+
+    def test_fast_motion_warns_but_does_not_raise(self):
+        """A snap is legitimately fast. Rejecting it would reject the signal."""
+        from tracelab.ingest import collect_warnings, from_records
+
+        yaw = [0.0] * 20 + [40.0] * 20  # 40 deg in one tick at 60 Hz
+        traces = from_records([{"id": "fast", "label": "snap", "yaw": yaw,
+                                "pitch": [0.0] * 40, "target_yaw": [0.0] * 40,
+                                "target_pitch": [0.0] * 40}])
+        self.assertEqual(len(traces), 1)
+        self.assertTrue(collect_warnings(traces[0], 60))
+
+    def test_rejects_impossible_jump(self):
+        from tracelab.ingest import IngestError, from_records
+
+        yaw = [0.0] * 20 + [1e7] * 20
+        with self.assertRaises(IngestError):
+            from_records([{"id": "boom", "label": "snap", "yaw": yaw,
+                           "pitch": [0.0] * 40, "target_yaw": [0.0] * 40,
+                           "target_pitch": [0.0] * 40}])
+
+
+class TestModel(unittest.TestCase):
+    def setUp(self):
+        import random
+        import tempfile
+
+        from tracelab.model import train_bundle
+
+        self.dir = tempfile.mkdtemp()
+        rng = random.Random(3)
+        data = [simulate_trace(k, rng, ticks=120) for k in KINDS for _ in range(6)]
+        X = [[extract(t)[k] for k in FEATURE_NAMES] for t in data]
+        y = [0 if t.kind == "human" else 1 for t in data]
+        det = LogisticDetector(epochs=120).fit(X, y)
+        self.bundle = train_bundle(det, name="test", threshold=0.5)
+        self.data = data
+
+    def test_save_load_round_trip_is_identical(self):
+        from tracelab.model import Bundle
+
+        path = os.path.join(self.dir, "m.json")
+        self.bundle.save(path)
+        back = Bundle.load(path)
+        for t in self.data[:6]:
+            self.assertAlmostEqual(
+                self.bundle.score_trace(t), back.score_trace(t), places=12
+            )
+
+    def test_card_carries_metadata(self):
+        self.assertEqual(self.bundle.card.name, "test")
+        self.assertEqual(self.bundle.card.features, list(FEATURE_NAMES))
+        self.assertTrue(self.bundle.card.created_utc.endswith("Z"))
+
+    def test_unsupported_format_version_raises(self):
+        from tracelab.model import Bundle
+
+        d = self.bundle.to_dict()
+        d["card"]["format_version"] = 99
+        with self.assertRaises(ValueError):
+            Bundle.from_dict(d)
+
+    def test_explain_is_sorted_by_magnitude(self):
+        parts = self.bundle.explain(self.data[0], top=5)
+        self.assertEqual(len(parts), 5)
+        mags = [abs(v) for _, v in parts]
+        self.assertEqual(mags, sorted(mags, reverse=True))
+
+    def test_decision_uses_threshold(self):
+        self.assertEqual(self.bundle.decision(0.99), "flag")
+        self.assertEqual(self.bundle.decision(0.01), "pass")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

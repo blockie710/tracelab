@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 
+from .detector import LogisticDetector
 from .evaluate import run_experiment
+from .features import FEATURE_NAMES, extract
 from .report import write_report
 from .simulate import simulate_trace
 from .vision import round_trip_check, save_sample_frames
@@ -72,6 +75,103 @@ def cmd_simulate(args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    from .ingest import to_jsonl
+    from .simulate import simulate_dataset
+
+    data = simulate_dataset(args.per_kind, seed=args.seed, ticks=args.ticks)
+    for i, t in enumerate(data):
+        setattr(t, "trace_id", f"{t.kind}-{i:04d}")
+    to_jsonl(data, args.out)
+    print(f"wrote {len(data)} traces to {args.out}")
+    return 0
+
+
+def cmd_train(args) -> int:
+    from .detector import tpr_at_fpr
+    from .ingest import load
+    from .model import train_bundle
+
+    traces = load(args.data)
+    labelled = [t for t in traces if t.kind != "unknown"]
+    if len(labelled) < 20:
+        print(f"need at least 20 labelled traces, got {len(labelled)}", file=sys.stderr)
+        return 2
+    pos = sum(1 for t in labelled if t.kind != "human")
+    neg = len(labelled) - pos
+    if not pos or not neg:
+        print("need both positive and negative labels", file=sys.stderr)
+        return 2
+
+    X = [[extract(t)[k] for k in FEATURE_NAMES] for t in labelled]
+    y = [0 if t.kind == "human" else 1 for t in labelled]
+    model = LogisticDetector(l2=args.l2, epochs=args.epochs).fit(X, y)
+    scores = model.predict_proba(X)
+    tpr, thr = tpr_at_fpr(scores, y, target_fpr=args.target_fpr)
+
+    bundle = train_bundle(
+        model,
+        name=args.name,
+        metrics={
+            "tpr_at_target_fpr": round(tpr, 4),
+            "target_fpr": args.target_fpr,
+            "n_train": len(labelled),
+            "n_pos": pos,
+            "n_neg": neg,
+            "in_sample": True,
+        },
+        training={"source": args.data, "l2": args.l2, "epochs": args.epochs},
+        threshold=thr,
+        target_fpr=args.target_fpr,
+    )
+    bundle.save(args.out)
+    print(f"trained on {len(labelled)} traces ({pos} pos / {neg} neg)")
+    print(f"  TPR @ {args.target_fpr:.1%} FPR : {tpr:.3f}  (threshold {thr:.3f})")
+    print(f"  wrote {args.out}")
+    print("  note: metrics are in-sample; use `tracelab eval` on held-out data")
+    return 0
+
+
+def cmd_score(args) -> int:
+    from .ingest import load
+    from .model import Bundle
+
+    bundle = Bundle.load(args.model)
+    traces = load(args.data)
+    rows = []
+    for t in traces:
+        s = bundle.score_trace(t)
+        rows.append(
+            {
+                "trace_id": getattr(t, "trace_id", "?"),
+                "reference_label": t.kind,
+                "score": round(s, 6),
+                "decision": bundle.decision(s),
+                "top_feature": bundle.explain(t, top=1)[0][0],
+            }
+        )
+    rows.sort(key=lambda r: -r["score"])
+
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            if args.out.endswith(".csv"):
+                w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+                w.writeheader()
+                w.writerows(rows)
+            else:
+                json.dump(rows, fh, indent=2)
+        print(f"wrote {len(rows)} scored traces to {args.out}")
+
+    flagged = sum(1 for r in rows if r["decision"] == "flag")
+    print(f"{len(rows)} traces scored, {flagged} flagged at threshold {bundle.card.threshold:.3f}")
+    for r in rows[: args.top]:
+        print(
+            f"  {r['trace_id']:32s} {r['score']:.3f}  {r['decision']:5s} "
+            f"({r['reference_label']}, driven by {r['top_feature']})"
+        )
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="tracelab", description=__doc__)
     p.add_argument("--version", action="version", version="tracelab 0.1.0")
@@ -101,6 +201,29 @@ def main(argv=None) -> int:
     s.add_argument("--ticks", type=int, default=180)
     s.add_argument("--seed", type=int, default=1)
     s.set_defaults(func=cmd_simulate)
+
+    x = sub.add_parser("export", help="write a synthetic dataset as JSONL")
+    x.add_argument("--out", default="data/simulated.jsonl")
+    x.add_argument("--per-kind", type=int, default=200, dest="per_kind")
+    x.add_argument("--ticks", type=int, default=180)
+    x.add_argument("--seed", type=int, default=7)
+    x.set_defaults(func=cmd_export)
+
+    t = sub.add_parser("train", help="fit a model from labelled traces and save a bundle")
+    t.add_argument("--data", required=True, help=".jsonl, .json or .csv of traces")
+    t.add_argument("--out", default="models/tracelab.json")
+    t.add_argument("--name", default="tracelab-default")
+    t.add_argument("--l2", type=float, default=0.05)
+    t.add_argument("--epochs", type=int, default=500)
+    t.add_argument("--target-fpr", type=float, default=0.01, dest="target_fpr")
+    t.set_defaults(func=cmd_train)
+
+    sc = sub.add_parser("score", help="score traces with a saved bundle")
+    sc.add_argument("--model", required=True)
+    sc.add_argument("--data", required=True)
+    sc.add_argument("--out", help="write .json or .csv")
+    sc.add_argument("--top", type=int, default=5)
+    sc.set_defaults(func=cmd_score)
 
     args = p.parse_args(argv)
     return args.func(args)
